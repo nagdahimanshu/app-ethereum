@@ -38,9 +38,9 @@ APPVERSION_P = 0
 APPVERSION = $(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)-dev
 APP_LOAD_FLAGS = --appFlags 0xa40 --dep Ethereum:$(APPVERSION)
 
-###########################
-# Set Chain environnement #
-###########################
+#########################
+# Set Chain environment #
+#########################
 
 ifeq ($(CHAIN),)
     CHAIN = ethereum
@@ -123,7 +123,6 @@ else
     DEFINES += HAVE_BAGL
     DEFINES += HAVE_UX_FLOW
     ifeq ($(TARGET_NAME),TARGET_NANOS)
-        DEFINES += HAVE_WALLET_ID_SDK
         DEFINES += BAGL_WIDTH=128 BAGL_HEIGHT=32
     else
         DEFINES += HAVE_GLO096

@@ -5,7 +5,21 @@
 | :rotating_light:     | Breaks build                  |
 | :warning:            | Breaks compatibility with app |
 
-## [latest](/) - 2024/02/07
+## [latest](/) - 2024/04/12
+
+### Fixed
+
+* Fix potential oob writes in `amountToString`
+
+## [8fe6572](/../../commit/8fe6572) - 2024/03/27
+
+### Changed
+
+* Add new functions `getEthAddressFromRawKey` and `getEthAddressStringFromRawKey`
+* Simplify crypto calls in `getEthAddressStringFromBinary`
+* Cleanup useless `cx_sha3_t` useless parameter
+
+## [0a98664](/../../commit/0a98664) - 2024/02/07
 
 ### Removed
 

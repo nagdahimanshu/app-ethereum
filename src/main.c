@@ -31,6 +31,7 @@
 #include "commands_712.h"
 #include "challenge.h"
 #include "domain_name.h"
+#include "lib_standard_app/crypto_helpers.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
@@ -88,28 +89,6 @@ void io_seproxyhal_send_status(uint32_t sw) {
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
 }
 
-void format_signature_out(const uint8_t *signature) {
-    memset(G_io_apdu_buffer + 1, 0x00, 64);
-    uint8_t offset = 1;
-    uint8_t xoffset = 4;  // point to r value
-    // copy r
-    uint8_t xlength = signature[xoffset - 1];
-    if (xlength == 33) {
-        xlength = 32;
-        xoffset++;
-    }
-    memmove(G_io_apdu_buffer + offset + 32 - xlength, signature + xoffset, xlength);
-    offset += 32;
-    xoffset += xlength + 2;  // move over rvalue and TagLEn
-    // copy s value
-    xlength = signature[xoffset - 1];
-    if (xlength == 33) {
-        xlength = 32;
-        xoffset++;
-    }
-    memmove(G_io_apdu_buffer + offset + 32 - xlength, signature + xoffset, xlength);
-}
-
 unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
     switch (channel & ~(IO_FLAGS)) {
         case CHANNEL_KEYBOARD:
@@ -151,32 +130,6 @@ extraInfo_t *getKnownToken(uint8_t *contractAddress) {
     return NULL;
 }
 
-#ifndef HAVE_WALLET_ID_SDK
-
-unsigned int const U_os_perso_seed_cookie[] = {
-    0xda7aba5e,
-    0xc1a551c5,
-};
-
-void handleGetWalletId(volatile unsigned int *tx) {
-    unsigned char t[64];
-    cx_ecfp_256_private_key_t priv;
-    cx_ecfp_256_public_key_t pub;
-    // seed => priv key
-    os_perso_derive_node_bip32(CX_CURVE_256K1, U_os_perso_seed_cookie, 2, t, NULL);
-    // priv key => pubkey
-    cx_ecdsa_init_private_key(CX_CURVE_256K1, t, 32, &priv);
-    cx_ecfp_generate_pair(CX_CURVE_256K1, &pub, &priv, 1);
-    // pubkey -> sha512
-    cx_hash_sha512(pub.W, sizeof(pub.W), t, sizeof(t));
-    // ! cookie !
-    memmove(G_io_apdu_buffer, t, 64);
-    *tx = 64;
-    THROW(0x9000);
-}
-
-#endif  // HAVE_WALLET_ID_SDK
-
 const uint8_t *parseBip32(const uint8_t *dataBuffer, uint8_t *dataLength, bip32_path_t *bip32) {
     if (*dataLength < 1) {
         PRINTF("Invalid data\n");
@@ -212,16 +165,6 @@ void handleApdu(unsigned int *flags, unsigned int *tx) {
 
     BEGIN_TRY {
         TRY {
-#ifndef HAVE_WALLET_ID_SDK
-
-            if ((G_io_apdu_buffer[OFFSET_CLA] == COMMON_CLA) &&
-                (G_io_apdu_buffer[OFFSET_INS] == COMMON_INS_GET_WALLET_ID)) {
-                handleGetWalletId(tx);
-                return;
-            }
-
-#endif  // HAVE_WALLET_ID_SDK
-
             if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
                 THROW(0x6E00);
             }
@@ -427,7 +370,7 @@ void handleApdu(unsigned int *flags, unsigned int *tx) {
             // If we are in swap mode and have validated a TX, we send it and immediately quit
             if (quit_now) {
                 if (io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, *tx) == 0) {
-                    // In case of success, the apdu is sent immediatly and eth exits
+                    // In case of success, the apdu is sent immediately and eth exits
                     // Reaching this code means we encountered an error
                     finalize_exchange_sign_transaction(false);
                 } else {
@@ -508,9 +451,6 @@ void app_main(void) {
         }
         END_TRY;
     }
-
-    // return_to_dashboard:
-    return;
 }
 
 // override point, but nothing more to do
