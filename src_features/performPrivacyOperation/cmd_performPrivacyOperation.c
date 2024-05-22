@@ -3,6 +3,7 @@
 
 #include "feature_performPrivacyOperation.h"
 #include "common_ui.h"
+#include "uint_common.h"
 
 #define P2_PUBLIC_ENCRYPTION_KEY 0x00
 #define P2_SHARED_SECRET         0x01
@@ -89,15 +90,10 @@ void handlePerformPrivacyOperation(uint8_t p1,
         THROW(0x6A80);
     }
 
-#ifndef NO_CONSENT
-    if (p1 == P1_NON_CONFIRM)
-#endif  // NO_CONSENT
-    {
+    if (p1 == P1_NON_CONFIRM) {
         *tx = set_result_perform_privacy_operation();
         THROW(0x9000);
-    }
-#ifndef NO_CONSENT
-    else {
+    } else {
         snprintf(strings.common.fullAddress,
                  sizeof(strings.common.fullAddress),
                  "0x%.*s",
@@ -106,11 +102,11 @@ void handlePerformPrivacyOperation(uint8_t p1,
         for (uint8_t i = 0; i < 32; i++) {
             privateKeyData[i] = tmpCtx.publicKeyContext.publicKey.W[32 - i];
         }
-        snprintf(strings.common.fullAmount,
-                 sizeof(strings.common.fullAmount) - 1,
-                 "%.*H",
-                 32,
-                 privateKeyData);
+        format_hex(privateKeyData,
+                   32,
+                   strings.common.fullAmount,
+                   sizeof(strings.common.fullAmount) - 1);
+
         if (p2 == P2_PUBLIC_ENCRYPTION_KEY) {
             ui_display_privacy_public_key();
         } else {
@@ -119,5 +115,4 @@ void handlePerformPrivacyOperation(uint8_t p1,
 
         *flags |= IO_ASYNCH_REPLY;
     }
-#endif  // NO_CONSENT
 }

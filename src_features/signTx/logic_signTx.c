@@ -8,11 +8,13 @@
 #include "common_ui.h"
 #include "ui_callbacks.h"
 #include "apdu_constants.h"
-#include "lib_standard_app/crypto_helpers.h"
+#include "crypto_helpers.h"
+#include "format.h"
+#include "manage_asset_info.h"
 
 #define ERR_SILENT_MODE_CHECK_FAILED 0x6001
 
-uint32_t splitBinaryParameterPart(char *result, uint8_t *parameter) {
+static uint32_t splitBinaryParameterPart(char *result, size_t result_size, uint8_t *parameter) {
     uint32_t i;
     for (i = 0; i < 8; i++) {
         if (parameter[i] != 0x00) {
@@ -25,7 +27,7 @@ uint32_t splitBinaryParameterPart(char *result, uint8_t *parameter) {
         result[2] = '\0';
         return 2;
     } else {
-        array_hexstr(result, parameter + i, 8 - i);
+        format_hex(parameter + i, 8 - i, result, result_size);
         return ((8 - i) * 2);
     }
 }
@@ -144,7 +146,10 @@ customStatus_e customProcessor(txContext_t *context) {
             }
             dataContext.tokenContext.fieldOffset = 0;
             if (fieldPos == 0) {
-                array_hexstr(strings.tmp.tmp, dataContext.tokenContext.data, 4);
+                format_hex(dataContext.tokenContext.data,
+                           4,
+                           strings.tmp.tmp,
+                           sizeof(strings.tmp.tmp));
                 ui_confirm_selector();
             } else {
                 uint32_t offset = 0;
@@ -155,6 +160,7 @@ customStatus_e customProcessor(txContext_t *context) {
                          dataContext.tokenContext.fieldIndex);
                 for (i = 0; i < 4; i++) {
                     offset += splitBinaryParameterPart(strings.tmp.tmp + offset,
+                                                       sizeof(strings.tmp.tmp) - offset,
                                                        dataContext.tokenContext.data + 8 * i);
                     if (i != 3) {
                         strings.tmp.tmp[offset++] = ':';
@@ -361,14 +367,14 @@ __attribute__((noinline)) static bool finalize_parsing_helper(bool direct, bool 
         if ((pluginFinalize.tokenLookup1 != NULL) || (pluginFinalize.tokenLookup2 != NULL)) {
             if (pluginFinalize.tokenLookup1 != NULL) {
                 PRINTF("Lookup1: %.*H\n", ADDRESS_LENGTH, pluginFinalize.tokenLookup1);
-                pluginProvideInfo.item1 = getKnownToken(pluginFinalize.tokenLookup1);
+                pluginProvideInfo.item1 = get_asset_info_by_addr(pluginFinalize.tokenLookup1);
                 if (pluginProvideInfo.item1 != NULL) {
                     PRINTF("Token1 ticker: %s\n", pluginProvideInfo.item1->token.ticker);
                 }
             }
             if (pluginFinalize.tokenLookup2 != NULL) {
                 PRINTF("Lookup2: %.*H\n", ADDRESS_LENGTH, pluginFinalize.tokenLookup2);
-                pluginProvideInfo.item2 = getKnownToken(pluginFinalize.tokenLookup2);
+                pluginProvideInfo.item2 = get_asset_info_by_addr(pluginFinalize.tokenLookup2);
                 if (pluginProvideInfo.item2 != NULL) {
                     PRINTF("Token2 ticker: %s\n", pluginProvideInfo.item2->token.ticker);
                 }
@@ -530,20 +536,13 @@ end:
 
 void finalizeParsing(bool direct) {
     bool use_standard_UI = true;
-    bool no_consent_check;
 
     if (!finalize_parsing_helper(direct, &use_standard_UI)) {
         return;
     }
     // If called from swap, the user has already validated a standard transaction
     // And we have already checked the fields of this transaction above
-    no_consent_check = G_called_from_swap && use_standard_UI;
-
-#ifdef NO_CONSENT
-    no_consent_check = true;
-#endif  // NO_CONSENT
-
-    if (no_consent_check) {
+    if (G_called_from_swap && use_standard_UI) {
         io_seproxyhal_touch_tx_ok(NULL);
     } else {
         if (use_standard_UI) {

@@ -135,6 +135,12 @@ If you prefer using a terminal to perform the steps manually, you can use the gu
 
 Setup a compilation environment by following the [shell with docker approach](#with-a-terminal).
 
+Be sure you checkout the submodule:
+
+```shell
+git submodule update --init
+```
+
 From inside the container, use the following command to build the app:
 
 ```shell
@@ -257,9 +263,11 @@ to compile and run them.
 
 ## Contributing
 
-Contributions are what makes the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions are what makes the open source community such an amazing place to learn, inspire, and create.
+Any contributions you make are **greatly appreciated**.
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag `enhancement`.
+If you have a suggestion that would make this better, please fork the repo and create a pull request.
+You can also simply open an issue with the tag `enhancement`.
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/my-feature`)
